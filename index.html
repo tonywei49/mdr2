@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MDR 智能文件助手 BETA版</title>
+<title>MDR 智能文件助手 BETA II版</title>
 <style>
 :root {
   --brand: #1664F2;
@@ -450,6 +451,25 @@ body {
   padding-top: 1rem;
   border-top: 1px solid #eee;
 }
+
+/* 内联文件下载链接样式 */
+.file-download-inline {
+  display: inline-block;
+  margin: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--brand);
+  color: white !important;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  line-height: 1.5;
+}
+
+.file-download-inline:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
 </style>
 </head>
 <body>
@@ -459,7 +479,7 @@ body {
   <div class="chat-header">
     <h1>
       <div class="header-icon">📄</div>
-      MDR 智能文件助手 BETA版
+      MDR 智能文件助手 BETA II版
     </h1>
   </div>
 
@@ -468,7 +488,7 @@ body {
     <div class="welcome-message">
       <div class="welcome-icon">💬</div>
       <p>欢迎使用 MDR 智能文件助手！</p>
-      <p>您可以上传文件并与我对话，我会帮助您分析和处理文件内容。</p>
+      <p>我会帮助您分析和处理MDR文件内容，可先输入"操作步骤"了解流程。</p>
       <p>现在第一章到第六章已经可以生成，测试中有任何问题请尽速反馈。</p>
       <p><small>支持格式：TXT, MD, PDF, DOC, DOCX, XLSX, XLS, CSV, PPT, PPTX, XML, EPUB, EML, MSG, HTML, JPG, JPEG, PNG, GIF, WEBP, SVG</small></p>
     </div>
@@ -516,7 +536,7 @@ body {
 // Dify API 配置
 const DIFY_CONFIG = {
   baseUrl: 'https://tonywei49.vip.cpolar.cn',
-  apiKey: 'app-zen4ouGYdVpO2IGfvO3mNWEm', // 请替换为您的实际API密钥
+  apiKey: 'app-72LvNGrnTbzSmJFYSIPkv3yW', // 请替换为您的实际API密钥
   user: 'user-' + Math.random().toString(36).substr(2, 9) // 生成随机用户ID
 };
 
@@ -608,12 +628,12 @@ async function uploadFileToDify(file) {
   const data = await response.json();
   return data.id;
 }
+
 // 根据文件扩展名判断文件类型
 function getFileType(fileName) {
-      // 添加参数验证
   if (!fileName || typeof fileName !== 'string') {
-  console.warn('getFileType: fileName is undefined or not a string:', fileName);
-  return 'custom'; // 默认返回 custom 类型
+    console.warn('getFileType: fileName is undefined or not a string:', fileName);
+    return 'custom'; // 默认返回 custom 类型
   }
   const extension = fileName.toLowerCase().split('.').pop();
   
@@ -631,6 +651,7 @@ function getFileType(fileName) {
     return 'custom'; // 其他文件类型
   }
 }
+
 // 更新文件预览
 function updateFilePreview() {
   if (uploadedFiles.length === 0) {
@@ -715,62 +736,6 @@ function showError(message) {
   }, 5000);
 }
 
-// 处理工作流输出
-function processWorkflowOutputs(outputs) {
-  const container = document.createElement('div');
-  
-  // 处理文字输出 (output6-output7)
-  const textOutputs = ['output6', 'output7'];
-  textOutputs.forEach(key => {
-    if (outputs[key] && outputs[key].trim()) {
-      const textDiv = document.createElement('div');
-      textDiv.style.marginBottom = '1rem';
-      textDiv.textContent = outputs[key];
-      container.appendChild(textDiv);
-    }
-  });
-  
-  // 处理文件输出 (output1-output5)
-  const fileOutputs = ['output1', 'output2', 'output3', 'output4', 'output5'];
-  const fileLinks = [];
-  
-  fileOutputs.forEach(key => {
-    if (outputs[key] && Array.isArray(outputs[key]) && outputs[key].length > 0) {
-      outputs[key].forEach(file => {
-        if (file && file.url) {
-          const downloadUrl = `${DIFY_CONFIG.baseUrl}${file.url}`;  // 拼接 baseUrl 和文件路径
-          const fileName = file.filename || `output2_${key}.docx`;  // 使用filename，如果没有，使用默认名称  
-          fileLinks.push({
-            name: fileName,
-            url: downloadUrl
-          });
-        }
-      });
-    }
-  });
-  
-  // 添加文件下载链接
-  if (fileLinks.length > 0) {
-    const downloadsDiv = document.createElement('div');
-    downloadsDiv.className = 'file-downloads';
-    downloadsDiv.innerHTML = '<strong>生成的文件：</strong><br>';
-    
-    fileLinks.forEach(file => {
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.className = 'file-download';
-      link.textContent = `📥 ${file.name}`;
-      link.download = file.name;
-      link.target = '_blank';
-      downloadsDiv.appendChild(link);
-    });
-    
-    container.appendChild(downloadsDiv);
-  }
-  
-  return container;
-}
-
 // 发送消息到Dify工作流
 async function sendMessage() {
   const message = messageInput.value.trim();
@@ -809,29 +774,36 @@ async function sendMessage() {
   showTyping();
   
   try {
-    // 准备工作流输入参数
-    const inputs = {
-      name: message || '', // 文字输入参数
-      mdrfiles: uploadedFiles.map((file, index) => ({
-      type: getFileType(file.name), // 使用文件名而不是文件ID
-      transfer_method: 'local_file', // 使用本地文件上传方式 
-      upload_file_id: uploadedFileIds[index]
-    })) // 将文件ID包装成正确的文件对象格式
-  };
+    // 准备对话流输入参数
+    const requestData = {
+      inputs: {}, // 空对象，符合API要求
+      query: message || '', // 直接将消息作为query参数
+      response_mode: 'streaming', // 流式输出
+      user: DIFY_CONFIG.user,
+    };
     
-    // 调用Dify工作流API
-    const response = await fetch(`${DIFY_CONFIG.baseUrl}/v1/workflows/run`, {
+    // 如果有会话ID，添加到请求中
+    if (conversationId) {
+      requestData.conversation_id = conversationId;
+    }
+    
+    // 如果有文件，添加到请求中
+    if (uploadedFileIds.length > 0) {
+      requestData.files = uploadedFileIds.map((fileId, index) => ({
+        type: getFileType(uploadedFiles[index].name),
+        transfer_method: 'local_file',
+        upload_file_id: fileId
+      }));
+    }
+    
+    // 调用Dify对话流API
+    const response = await fetch(`${DIFY_CONFIG.baseUrl}/v1/chat-messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${DIFY_CONFIG.apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        inputs: inputs,
-        response_mode: 'streaming', // 流式输出
-        user: DIFY_CONFIG.user,
-        conversation_id: conversationId // 多轮对话支持
-      })
+      body: JSON.stringify(requestData)
     });
     
     if (!response.ok) {
@@ -844,7 +816,6 @@ async function sendMessage() {
     // 创建机器人消息容器
     currentBotMessage = addMessage('', false);
     let accumulatedContent = '';
-    let workflowOutputs = {};
     
     // 处理流式响应
     const reader = response.body.getReader();
@@ -865,61 +836,111 @@ async function sendMessage() {
         if (line.startsWith('data: ')) {
           const data = line.slice(6).trim();
           if (data === '[DONE]') {
-            console.log('工作流执行完成');
+            console.log('对话完成');
             break;
           }
           
           try {
             const parsed = JSON.parse(data);
             
-            if (parsed.event === 'workflow_started') {
-              if (parsed.data && parsed.data.id) {
-                conversationId = parsed.data.id;
-              }
-            } else if (parsed.event === 'node_started') {
-              console.log('节点开始:', parsed.data);
-            } else if (parsed.event === 'node_finished') {
-              console.log('节点完成:', parsed.data);
-              
-              // 处理文字输出节点
-              if (parsed.data && parsed.data.outputs) {
-                const outputs = parsed.data.outputs;
-                
-                // 检查是否是LLM输出节点 (output6-output7)
-                if (outputs.text) {
-                  accumulatedContent += outputs.text + '\n\n';
-                  currentBotMessage.textContent = accumulatedContent;
-                  chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-                
-                // 保存所有输出用于最终处理
-                Object.assign(workflowOutputs, outputs);
-              }
-            } else if (parsed.event === 'workflow_finished') {
-              console.log('工作流完成:', parsed.data);
-              
-              // 处理最终输出
-              if (parsed.data && parsed.data.outputs) {
-                Object.assign(workflowOutputs, parsed.data.outputs);
-              }
-              
-              // 更新消息内容，包含文件下载链接
-              const finalContent = processWorkflowOutputs(workflowOutputs);
-              if (finalContent.children.length > 0) {
-                currentBotMessage.innerHTML = '';
-                currentBotMessage.appendChild(finalContent);
-              } else if (accumulatedContent) {
-                currentBotMessage.textContent = accumulatedContent;
-              } else {
-                currentBotMessage.textContent = '工作流执行完成，但没有返回内容。';
-              }
-              
-              break;
-            } else if (parsed.event === 'error') {
-              throw new Error(parsed.data || '工作流执行出错');
+            // 保存对话ID用于多轮对话
+            if (parsed.conversation_id) {
+              conversationId = parsed.conversation_id;
             }
-          } catch (parseError) {
-            console.warn('解析响应数据失败:', parseError, 'Data:', data);
+            
+            // 根据事件类型处理不同的响应
+            if (parsed.event === 'message') {
+              let newContent = '';
+              
+              // 处理消息内容
+              if (parsed.message && parsed.message.content) {
+                newContent = parsed.message.content;
+              }
+              
+              // 处理答案内容
+              if (parsed.answer) {
+                newContent = parsed.answer;
+              }
+              
+              // 如果有新内容
+              if (newContent) {
+                // 累加到现有内容
+                accumulatedContent += newContent;
+                
+                // 直接处理Markdown格式文件链接为HTML下载按钮
+                let processedContent = accumulatedContent;
+                
+                // 直接将Markdown格式文件链接转换为HTML下载链接
+                const fileUrlRegex = /\[(.*?)\]\(((?:\/files\/tools\/|\/files\/).*?)\)/g;
+                processedContent = processedContent.replace(fileUrlRegex, (match, fileName, fileUrl) => {
+                  const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${DIFY_CONFIG.baseUrl}${fileUrl}`;
+                  return `<a href="${fullUrl}" class="file-download-inline" download="${fileName}" target="_blank">📥 ${fileName}</a>`;
+                });
+                
+                // 处理其他Markdown格式
+                processedContent = processedContent
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // 加粗
+                  .replace(/\*([^\*]+)\*/g, '<em>$1</em>')          // 斜体
+                  .replace(/\r\n/g, '\n')                           // 统一换行符
+                  .replace(/\n\n+/g, '<br><br>')                    // 多行换行变成段落分隔
+                  .replace(/\n/g, '<br>');                          // 单行换行变成HTML换行
+                
+                // 更新显示
+                currentBotMessage.innerHTML = processedContent;
+                
+                // 滚动到最新消息
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+            } 
+            else if (parsed.event === 'done') {
+              console.log("处理完成事件:", parsed);
+              
+              // 处理文件数组
+              if (parsed.files && parsed.files.length > 0) {
+                console.log("发现文件数组:", parsed.files);
+                
+                // 创建文件下载区域
+                const filesDiv = document.createElement('div');
+                filesDiv.className = 'file-downloads';
+                filesDiv.innerHTML = '<strong>生成的文件：</strong><br>';
+                
+                parsed.files.forEach(file => {
+                  let fileUrl = file.url || file.remote_url;
+                  
+                  if (fileUrl) {
+                    // 确保文件URL包含baseUrl
+                    if (!fileUrl.startsWith('http')) {
+                      fileUrl = `${DIFY_CONFIG.baseUrl}${fileUrl}`;
+                      console.log("已添加baseUrl到文件链接:", fileUrl);
+                    }
+                    
+                    const fileName = file.filename || '下载文件';
+                    
+                    // 创建下载按钮
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.className = 'file-download';
+                    link.textContent = `📥 ${fileName}`;
+                    link.download = fileName;
+                    link.target = '_blank';
+                    filesDiv.appendChild(link);
+                    
+                    console.log("添加文件下载按钮:", fileName, "链接:", fileUrl);
+                  }
+                });
+                
+                // 添加到消息元素末尾
+                currentBotMessage.appendChild(filesDiv);
+                
+                // 滚动到最新消息
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+            } 
+            else if (parsed.event === 'error') {
+              throw new Error(parsed.message || '对话执行出错');
+            }
+          } catch (error) {
+            console.warn('解析响应数据失败:', error);
           }
         }
       }
@@ -960,4 +981,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
